@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Калькулятор стоимости посещения</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .calculator {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        .form-group {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+        input[type="time"] {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            width: 150px;
+            font-size: 16px;
+        }
+        input[type="time"]:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            margin-top: 8px;
+        }
+        .radio-group label {
+            font-weight: normal;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        input[type="radio"] {
+            transform: scale(1.2);
+        }
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 30px 0;
+        }
+        button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        button.calculate {
+            background: #27ae60;
+            color: white;
+        }
+        button.calculate:hover {
+            background: #219a52;
+            transform: translateY(-2px);
+        }
+        button.clear {
+            background: #e74c3c;
+            color: white;
+        }
+        button.clear:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+        .result {
+            background: linear-gradient(135deg, #e8f5e8, #d4edda);
+            padding: 25px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 5px solid #27ae60;
+            display: none;
+        }
+        .result h3 {
+            color: #155724;
+            margin-top: 0;
+        }
+        .tariff-info {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
+        }
+        .hotkeys {
+            text-align: center;
+            margin-top: 20px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <h1>🎯 Калькулятор стоимости посещения</h1>
+        
+        <div class="form-group">
+            <label>🕒 Время прихода:</label>
+            <input type="time" id="arrivalTime" value="10:00">
+        </div>
+        
+        <div class="form-group">
+            <label>🕓 Время ухода:</label>
+            <input type="time" id="departureTime" value="12:00">
+        </div>
+        
+        <div class="form-group">
+            <label>👤 Тип посетителя:</label>
+            <div class="radio-group">
+                <label><input type="radio" name="visitorType" value="1" checked> 👨 Взрослый</label>
+                <label><input type="radio" name="visitorType" value="2"> 👶 Ребенок</label>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>📅 Тип дня:</label>
+            <div class="radio-group">
+                <label><input type="radio" name="dayType" value="1" checked> 📅 Будний день</label>
+                <label><input type="radio" name="dayType" value="2"> 🎉 Выходной день</label>
+            </div>
+        </div>
+        
+        <div class="buttons">
+            <button class="calculate" onclick="calculateCost()">🧮 Рассчитать стоимость</button>
+            <button class="clear" onclick="clearForm()">🗑️ Очистить всё</button>
+        </div>
+        
+        <div class="hotkeys">
+            ⌨️ Горячие клавиши: Enter - рассчитать, Backspace - очистить
+        </div>
+        
+        <div id="result" class="result">
+            <!-- Результат будет здесь -->
+        </div>
+    </div>
+
+    <script>
+        function calculateCost() {
+            const arrivalTime = document.getElementById('arrivalTime').value;
+            const departureTime = document.getElementById('departureTime').value;
+            const visitorType = document.querySelector('input[name="visitorType"]:checked').value;
+            const dayType = document.querySelector('input[name="dayType"]:checked').value;
+            
+            const totalCost = calculateCostLogic(arrivalTime, departureTime, parseInt(visitorType), parseInt(dayType));
+            
+            showResult(totalCost, arrivalTime, departureTime, visitorType, dayType);
+        }
+        
+        function calculateCostLogic(arrivalTime, departureTime, visitorType, dayType) {
+            const [arrivalHours, arrivalMinutes] = arrivalTime.split(':').map(Number);
+            const [departureHours, departureMinutes] = departureTime.split(':').map(Number);
+            
+            let totalMinutes = (departureHours * 60 + departureMinutes) - (arrivalHours * 60 + arrivalMinutes);
+            
+            if (totalMinutes <= 0) {
+                alert('❌ Время ухода должно быть позже времени прихода');
+                return 0;
+            }
+            
+            let firstHourRate, secondHourRate, thirdHourRate;
+            
+            if (visitorType === 1 && dayType === 1) {
+                firstHourRate = 6.0; secondHourRate = 3.0; thirdHourRate = 2.0;
+            } else if (visitorType === 2 && dayType === 1) {
+                firstHourRate = 4.5; secondHourRate = 3.0; thirdHourRate = 2.0;
+            } else if (visitorType === 1 && dayType === 2) {
+                firstHourRate = 7.0; secondHourRate = 4.0; thirdHourRate = 3.0;
+            } else {
+                firstHourRate = 5.0; secondHourRate = 4.0; thirdHourRate = 3.0;
+            }
+            
+            let totalCost = 0;
+            let remainingMinutes = totalMinutes;
+            
+            if (remainingMinutes > 0) {
+                const firstHourMinutes = Math.min(remainingMinutes, 60);
+                totalCost += firstHourMinutes * firstHourRate;
+                remainingMinutes -= firstHourMinutes;
+            }
+            
+            if (remainingMinutes > 0) {
+                const secondHourMinutes = Math.min(remainingMinutes, 60);
+                totalCost += secondHourMinutes * secondHourRate;
+                remainingMinutes -= secondHourMinutes;
+            }
+            
+            if (remainingMinutes > 0) {
+                totalCost += remainingMinutes * thirdHourRate;
+            }
+            
+            if (totalCost < 180) totalCost = 180;
+            if (totalCost > 600) totalCost = 600;
+            
+            return totalCost;
+        }
+        
+        function showResult(totalCost, arrivalTime, departureTime, visitorType, dayType) {
+            const resultDiv = document.getElementById('result');
+            const visitorTypeText = visitorType === '1' ? 'Взрослый' : 'Ребенок';
+            const dayTypeText = dayType === '1' ? 'Будний день' : 'Выходной день';
+            
+            let resultHTML = `
+                <h3>✨ ДЕТАЛИ РАСЧЕТА ✨</h3>
+                <p><strong>🕒 Время прихода:</strong> ${arrivalTime}</p>
+                <p><strong>🕓 Время ухода:</strong> ${departureTime}</p>
+                <p><strong>👤 Тип посетителя:</strong> ${visitorTypeText}</p>
+                <p><strong>📅 Тип дня:</strong> ${dayTypeText}</p>
+                
+                <div class="tariff-info">
+                    <h4>💎 ПРИМЕНЯЕМЫЕ ТАРИФЫ:</h4>
+            `;
+            
+            if (visitorTypeText === 'Взрослый' && dayTypeText === 'Будний день') {
+                resultHTML += `<p>• 1-й час: 6 руб/мин<br>• 2-й час: 3 руб/мин<br>• 3-й час+: 2 руб/мин</p>`;
+            } else if (visitorTypeText === 'Ребенок' && dayTypeText === 'Будний день') {
+                resultHTML += `<p>• 1-й час: 4.5 руб/мин<br>• 2-й час: 3 руб/мин<br>• 3-й час+: 2 руб/мин</p>`;
+            } else if (visitorTypeText === 'Взрослый' && dayTypeText === 'Выходной день') {
+                resultHTML += `<p>• 1-й час: 7 руб/мин<br>• 2-й час: 4 руб/мин<br>• 3-й час+: 3 руб/мин</p>`;
+            } else {
+                resultHTML += `<p>• 1-й час: 5 руб/мин<br>• 2-й час: 4 руб/мин<br>• 3-й час+: 3 руб/мин</p>`;
+            }
+            
+            resultHTML += `</div>`;
+            
+            if (totalCost === 180) {
+                resultHTML += `
+                    <p><strong>📊 РАСЧЕТНАЯ стоимость:</strong> была меньше 180 руб.</p>
+                    <p><strong>💰 ФАКТИЧЕСКАЯ СТОИМОСТЬ:</strong> 180 руб.</p>
+                    <p><em>(применен минимальный лимит)</em></p>
+                `;
+            } else if (totalCost === 600) {
+                resultHTML += `
+                    <p><strong>📊 РАСЧЕТНАЯ стоимость:</strong> была больше 600 руб.</p>
+                    <p><strong>💰 ФАКТИЧЕСКАЯ СТОИМОСТЬ:</strong> 600 руб.</p>
+                    <p><em>(применен максимальный лимит)</em></p>
+                `;
+            } else {
+                resultHTML += `<p><strong>💰 ИТОГОВАЯ СТОИМОСТЬ:</strong> ${totalCost.toFixed(2)} руб.</p>`;
+            }
+            
+            resultHTML += `
+                <hr>
+                <p><strong>📈 Минимальная стоимость:</strong> 180 руб.</p>
+                <p><strong>📉 Максимальная стоимость:</strong> 600 руб.</p>
+            `;
+            
+            resultDiv.innerHTML = resultHTML;
+            resultDiv.style.display = 'block';
+            
+            // Прокручиваем к результату
+            resultDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function clearForm() {
+            document.getElementById('arrivalTime').value = '10:00';
+            document.getElementById('departureTime').value = '12:00';
+            document.querySelector('input[name="visitorType"][value="1"]').checked = true;
+            document.querySelector('input[name="dayType"][value="1"]').checked = true;
+            document.getElementById('result').style.display = 'none';
+        }
+        
+        // Горячие клавиши
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                calculateCost();
+            } else if (event.key === 'Backspace') {
+                event.preventDefault();
+                clearForm();
+            }
+        });
+
+        // Фокус на окно при загрузке
+        window.addEventListener('load', function() {
+            document.body.focus();
+        });
+    </script>
+</body>
+</html>
