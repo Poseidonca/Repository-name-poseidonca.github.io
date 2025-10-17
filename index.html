@@ -118,6 +118,13 @@
             color: #7f8c8d;
             font-size: 14px;
         }
+        .calculated-cost {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #2196f3;
+        }
     </style>
 </head>
 <body>
@@ -171,9 +178,9 @@
             const visitorType = document.querySelector('input[name="visitorType"]:checked').value;
             const dayType = document.querySelector('input[name="dayType"]:checked').value;
             
-            const totalCost = calculateCostLogic(arrivalTime, departureTime, parseInt(visitorType), parseInt(dayType));
+            const result = calculateCostLogic(arrivalTime, departureTime, parseInt(visitorType), parseInt(dayType));
             
-            showResult(totalCost, arrivalTime, departureTime, visitorType, dayType);
+            showResult(result, arrivalTime, departureTime, visitorType, dayType);
         }
         
         function calculateCostLogic(arrivalTime, departureTime, visitorType, dayType) {
@@ -184,7 +191,7 @@
             
             if (totalMinutes <= 0) {
                 alert('❌ Время ухода должно быть позже времени прихода');
-                return 0;
+                return { calculated: 0, final: 0 };
             }
             
             let firstHourRate, secondHourRate, thirdHourRate;
@@ -199,32 +206,47 @@
                 firstHourRate = 5.0; secondHourRate = 4.0; thirdHourRate = 3.0;
             }
             
-            let totalCost = 0;
+            let calculatedCost = 0;
             let remainingMinutes = totalMinutes;
             
             if (remainingMinutes > 0) {
                 const firstHourMinutes = Math.min(remainingMinutes, 60);
-                totalCost += firstHourMinutes * firstHourRate;
+                calculatedCost += firstHourMinutes * firstHourRate;
                 remainingMinutes -= firstHourMinutes;
             }
             
             if (remainingMinutes > 0) {
                 const secondHourMinutes = Math.min(remainingMinutes, 60);
-                totalCost += secondHourMinutes * secondHourRate;
+                calculatedCost += secondHourMinutes * secondHourRate;
                 remainingMinutes -= secondHourMinutes;
             }
             
             if (remainingMinutes > 0) {
-                totalCost += remainingMinutes * thirdHourRate;
+                calculatedCost += remainingMinutes * thirdHourRate;
             }
             
-            if (totalCost < 180) totalCost = 180;
-            if (totalCost > 600) totalCost = 600;
+            let finalCost = calculatedCost;
             
-            return totalCost;
+            // Применяем ограничения согласно новым правилам
+            if (visitorType === 2) { // Ребенок
+                if (finalCost < 150) finalCost = 150;
+            } else { // Взрослый
+                if (finalCost < 180) finalCost = 180;
+            }
+            
+            if (dayType === 2) { // Выходной день
+                if (finalCost > 800) finalCost = 800;
+            } else { // Будний день
+                if (finalCost > 600) finalCost = 600;
+            }
+            
+            return {
+                calculated: Math.round(calculatedCost * 100) / 100,
+                final: Math.round(finalCost * 100) / 100
+            };
         }
         
-        function showResult(totalCost, arrivalTime, departureTime, visitorType, dayType) {
+        function showResult(result, arrivalTime, departureTime, visitorType, dayType) {
             const resultDiv = document.getElementById('result');
             const visitorTypeText = visitorType === '1' ? 'Взрослый' : 'Ребенок';
             const dayTypeText = dayType === '1' ? 'Будний день' : 'Выходной день';
@@ -235,6 +257,10 @@
                 <p><strong>🕓 Время ухода:</strong> ${departureTime}</p>
                 <p><strong>👤 Тип посетителя:</strong> ${visitorTypeText}</p>
                 <p><strong>📅 Тип дня:</strong> ${dayTypeText}</p>
+                
+                <div class="calculated-cost">
+                    <strong>📊 РАСЧЕТНАЯ стоимость (без ограничений):</strong> ${result.calculated.toFixed(2)} руб.
+                </div>
                 
                 <div class="tariff-info">
                     <h4>💎 ПРИМЕНЯЕМЫЕ ТАРИФЫ:</h4>
@@ -252,26 +278,37 @@
             
             resultHTML += `</div>`;
             
-            if (totalCost === 180) {
-                resultHTML += `
-                    <p><strong>📊 РАСЧЕТНАЯ стоимость:</strong> была меньше 180 руб.</p>
-                    <p><strong>💰 ФАКТИЧЕСКАЯ СТОИМОСТЬ:</strong> 180 руб.</p>
-                    <p><em>(применен минимальный лимит)</em></p>
-                `;
-            } else if (totalCost === 600) {
-                resultHTML += `
-                    <p><strong>📊 РАСЧЕТНАЯ стоимость:</strong> была больше 600 руб.</p>
-                    <p><strong>💰 ФАКТИЧЕСКАЯ СТОИМОСТЬ:</strong> 600 руб.</p>
-                    <p><em>(применен максимальный лимит)</em></p>
-                `;
+            // Показываем примененные ограничения
+            if (result.calculated !== result.final) {
+                if (visitorType === '2' && result.calculated < 150) {
+                    resultHTML += `
+                        <p><strong>💰 ФАКТИЧЕСКАЯ СТОИМОСТЬ:</strong> ${result.final.toFixed(2)} руб.</p>
+                        <p><em>(применен минимальный лимит для ребенка)</em></p>
+                    `;
+                } else if (visitorType === '1' && result.calculated < 180) {
+                    resultHTML += `
+                        <p><strong>💰 ФАКТИЧЕСКАЯ СТОИМОСТЬ:</strong> ${result.final.toFixed(2)} руб.</p>
+                        <p><em>(применен минимальный лимит для взрослого)</em></p>
+                    `;
+                } else if (dayType === '2' && result.calculated > 800) {
+                    resultHTML += `
+                        <p><strong>💰 ФАКТИЧЕСКАЯ СТОИМОСТЬ:</strong> ${result.final.toFixed(2)} руб.</p>
+                        <p><em>(применен максимальный лимит для выходного дня)</em></p>
+                    `;
+                } else if (dayType === '1' && result.calculated > 600) {
+                    resultHTML += `
+                        <p><strong>💰 ФАКТИЧЕСКАЯ СТОИМОСТЬ:</strong> ${result.final.toFixed(2)} руб.</p>
+                        <p><em>(применен максимальный лимит для буднего дня)</em></p>
+                    `;
+                }
             } else {
-                resultHTML += `<p><strong>💰 ИТОГОВАЯ СТОИМОСТЬ:</strong> ${totalCost.toFixed(2)} руб.</p>`;
+                resultHTML += `<p><strong>💰 ИТОГОВАЯ СТОИМОСТЬ:</strong> ${result.final.toFixed(2)} руб.</p>`;
             }
             
             resultHTML += `
                 <hr>
-                <p><strong>📈 Минимальная стоимость:</strong> 180 руб.</p>
-                <p><strong>📉 Максимальная стоимость:</strong> 600 руб.</p>
+                <p><strong>📈 Минимальная стоимость:</strong> ${visitorType === '2' ? '150 руб. (ребенок)' : '180 руб. (взрослый)'}</p>
+                <p><strong>📉 Максимальная стоимость:</strong> ${dayType === '2' ? '800 руб. (выходной)' : '600 руб. (будний)'}</p>
             `;
             
             resultDiv.innerHTML = resultHTML;
